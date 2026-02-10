@@ -53,6 +53,8 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+playwright-report/
+test-results/
 
 # Node (frontend)
 node_modules/

@@ -60,7 +60,8 @@ Build and test each step before moving on:
 - [x] 11. Summarization (`pipeline/summarize.py`)
 - [x] 12. Query engine (router, assembler, answerer)
 - [x] 13. Document management endpoints (list, rename, delete)
-- [ ] 14. End-to-end testing
+- [x] 14. PDF viewer feature (citation click → opens PDF at page)
+- [x] 15. Deployment (Railway backend, Vercel frontend)
 
 ## Quick Reference
 
@@ -92,3 +93,32 @@ When spawning Task agents for specific domains, include relevant context from:
 
 ### Deferred (Post-MVP)
 - [Quality Testing Framework](docs/future/quality-testing.md) — Automated QA for pipeline stages
+
+## Deployment Status
+
+### GitHub
+- **Repo**: MikeMontgom/docuquery (created and pushed)
+
+### Railway (Backend)
+- **Project**: extraordinary-unity
+- **URL**: https://web-production-1485e.up.railway.app
+- **Status**: ✅ DEPLOYED AND RUNNING
+- Health check: `curl https://web-production-1485e.up.railway.app/health` → `{"status":"ok"}`
+
+### Vercel (Frontend)
+- **URL**: https://docuquery-six.vercel.app
+- **Status**: ✅ DEPLOYED AND CONNECTED
+- **CORS**: Railway `FRONTEND_URL` set to `https://docuquery-six.vercel.app` ✅
+
+## Known Issues / Suspended Features
+
+### PDF Page Extraction (DISABLED)
+- `images.save_all_pages()` in `pipeline/orchestrator.py` is disabled (commented out)
+- **Reason**: pdfplumber causes Python SIGTRAP crash on some PDFs
+- **Impact**: Individual page images are NOT saved to GCS
+- **Workaround**: PDF viewer popup uses signed URL to full PDF (works fine)
+- **Decision needed**: May remove entirely if PDF popup viewer is sufficient
+
+### Airtable Linked Record Filtering
+- `get_chunks_by_document()` cannot use Airtable formula for linked records
+- Workaround: Fetches all chunks and filters in Python (works but less efficient)
