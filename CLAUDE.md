@@ -45,7 +45,7 @@ PDF document question-answering system using variable-resolution retrieval.
 
 ## Build Order
 
-Build and test each step before moving on:
+All MVP features complete and deployed:
 
 - [x] 1. Project skeleton (FastAPI, config, health endpoint)
 - [x] 2. Airtable service (CRUD for Documents/Chunks)
@@ -62,6 +62,7 @@ Build and test each step before moving on:
 - [x] 13. Document management endpoints (list, rename, delete)
 - [x] 14. PDF viewer feature (citation click → opens PDF at page)
 - [x] 15. Deployment (Railway backend, Vercel frontend)
+- [x] 16. E2E behavior test suite (61 Playwright tests, 60/61 passing)
 
 ## Quick Reference
 
@@ -71,6 +72,12 @@ uvicorn main:app --reload
 
 # Run frontend
 cd frontend && npm run dev
+
+# Run E2E tests (against production)
+npx playwright test
+
+# Run specific test category
+npx playwright test tests/e2e/behaviors/api.spec.ts
 ```
 
 ## Documentation
@@ -80,6 +87,7 @@ cd frontend && npm run dev
 - [Airtable Schema](docs/airtable-schema.md)
 - [Processing Pipeline](docs/processing-pipeline.md)
 - [Query Pipeline](docs/query-pipeline.md)
+- [Behavior Specs](docs/BEHAVIORS.md)
 - [Prompts](docs/prompts/)
 
 ## Skills & Agent Context
@@ -93,22 +101,38 @@ When spawning Task agents for specific domains, include relevant context from:
 
 ### Deferred (Post-MVP)
 - [Quality Testing Framework](docs/future/quality-testing.md) — Automated QA for pipeline stages
+- SQLite migration (replace Airtable as data store)
 
 ## Deployment Status
 
+**Status: ✅ LIVE AND VERIFIED (2026-02-09)**
+
 ### GitHub
-- **Repo**: MikeMontgom/docuquery (created and pushed)
+- **Repo**: MikeMontgom/docuquery
 
 ### Railway (Backend)
 - **Project**: extraordinary-unity
+- **Service**: web
 - **URL**: https://web-production-1485e.up.railway.app
 - **Status**: ✅ DEPLOYED AND RUNNING
+- **CORS**: `FRONTEND_URL` = `https://docuquery-six.vercel.app`
 - Health check: `curl https://web-production-1485e.up.railway.app/health` → `{"status":"ok"}`
 
 ### Vercel (Frontend)
 - **URL**: https://docuquery-six.vercel.app
 - **Status**: ✅ DEPLOYED AND CONNECTED
-- **CORS**: Railway `FRONTEND_URL` set to `https://docuquery-six.vercel.app` ✅
+- **Env**: `VITE_API_URL` = `https://web-production-1485e.up.railway.app`
+
+### E2E Test Results
+- **60/61 passing** (1 skipped: no error-status documents to test)
+- 0 failures, 0 flaky
+- Full coverage: API, deployment, navigation, input, actions, display, errors, edge cases
+- Run with: `npx playwright test`
+
+### Railway Project Cleanup (2026-02-09)
+- **extraordinary-unity**: DocuQuery backend (ACTIVE)
+- ~~miraculous-victory~~: Deleted (was empty, no services)
+- ~~joyful-youth~~: Deleted (was crashed duplicate, missing GEMINI_API_KEY)
 
 ## Known Issues / Suspended Features
 
@@ -122,3 +146,4 @@ When spawning Task agents for specific domains, include relevant context from:
 ### Airtable Linked Record Filtering
 - `get_chunks_by_document()` cannot use Airtable formula for linked records
 - Workaround: Fetches all chunks and filters in Python (works but less efficient)
+- Will be resolved when migrating to SQLite
