@@ -5,6 +5,8 @@ Extracts text from PDF in 5-page batches, sequentially.
 Returns a master text string with [PAGE X] markers.
 """
 
+import logging
+import time
 from io import BytesIO
 from pathlib import Path
 
@@ -12,6 +14,8 @@ import google.generativeai as genai
 from pypdf import PdfReader, PdfWriter
 
 import config
+
+logger = logging.getLogger(__name__)
 
 # Configure Gemini
 genai.configure(api_key=config.GEMINI_API_KEY)
@@ -67,8 +71,14 @@ def extract_pdf(pdf_content: bytes, batch_size: int = 5) -> str:
     prompt_template = _load_prompt()
 
     # Process in batches
-    for batch_start in range(0, total_pages, batch_size):
+    total_batches = (total_pages + batch_size - 1) // batch_size
+    for batch_idx, batch_start in enumerate(range(0, total_pages, batch_size)):
         batch_end = min(batch_start + batch_size, total_pages)
+        batch_label = f"batch {batch_idx + 1}/{total_batches} (pages {batch_start + 1}-{batch_end})"
+
+        # Rate-limit: pause between batches to avoid Gemini 429s
+        if batch_idx > 0:
+            time.sleep(4)
 
         # Create batch PDF
         batch_pdf = _create_batch_pdf(reader, batch_start, batch_end)
@@ -85,8 +95,7 @@ def extract_pdf(pdf_content: bytes, batch_size: int = 5) -> str:
         )
 
         # Generate extraction with retry logic for rate limits
-        import time
-        max_retries = 3
+        max_retries = 5
         extracted = None
 
         try:
@@ -95,21 +104,32 @@ def extract_pdf(pdf_content: bytes, batch_size: int = 5) -> str:
                     response = model.generate_content(
                         [prompt, pdf_file],
                         generation_config=genai.GenerationConfig(
-                            temperature=0.1,  # Low temperature for consistency
+                            temperature=0.1,
                             max_output_tokens=32000,
                         ),
                     )
                     extracted = response.text
+                    logger.info(f"Extracted {batch_label}")
                     break
                 except Exception as e:
-                    if "rate" in str(e).lower() and attempt < max_retries - 1:
-                        wait_time = (attempt + 1) * 10  # 10s, 20s, 30s backoff
+                    err_msg = str(e).lower()
+                    is_rate_limit = any(
+                        s in err_msg
+                        for s in ["rate", "resource", "exhausted", "429", "quota"]
+                    )
+                    if is_rate_limit and attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 15  # 15s, 30s, 45s, 60s
+                        logger.warning(
+                            f"Rate limited on {batch_label}, "
+                            f"attempt {attempt + 1}/{max_retries}, "
+                            f"waiting {wait_time}s"
+                        )
                         time.sleep(wait_time)
                     else:
                         raise
 
             if extracted is None:
-                raise RuntimeError(f"Failed to extract batch {batch_start + 1}-{batch_end}")
+                raise RuntimeError(f"Failed to extract {batch_label}")
 
             # Strip batch markers if present
             if "==START OF EXTRACTION BATCH==" in extracted:

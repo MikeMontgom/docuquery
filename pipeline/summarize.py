@@ -56,7 +56,7 @@ def _extract_graphic_summary(content: str) -> str | None:
         return None
 
 
-def _summarize_text(text: str, prompt: str, max_retries: int = 3) -> str:
+def _summarize_text(text: str, prompt: str, max_retries: int = 5) -> str:
     """Generate summary for a text chunk using GPT-4o with retry logic."""
     import time
 
@@ -73,8 +73,13 @@ def _summarize_text(text: str, prompt: str, max_retries: int = 3) -> str:
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            if "rate_limit" in str(e).lower() and attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 5  # Exponential backoff: 5, 10, 15 seconds
+            err_msg = str(e).lower()
+            is_rate_limit = any(
+                s in err_msg
+                for s in ["rate", "resource", "exhausted", "429", "quota", "limit"]
+            )
+            if is_rate_limit and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 10  # 10s, 20s, 30s, 40s
                 time.sleep(wait_time)
             else:
                 raise

@@ -110,8 +110,11 @@ def score_breaks(text: str) -> str:
         return _process_segment(segments[0][0], prompt)
 
     # Multi-segment processing
+    import time
     results = []
     for i, (segment_text, start, end) in enumerate(segments):
+        if i > 0:
+            time.sleep(2)  # Pause between segments to avoid rate limits
         result = _process_segment(segment_text, prompt)
 
         if i > 0:
@@ -126,7 +129,7 @@ def score_breaks(text: str) -> str:
     return _resequence_breaks(combined)
 
 
-def _process_segment(text: str, prompt: str, max_retries: int = 3) -> str:
+def _process_segment(text: str, prompt: str, max_retries: int = 5) -> str:
     """Process a single segment with GPT-4o, with retry logic for rate limits."""
     import time
 
@@ -143,8 +146,13 @@ def _process_segment(text: str, prompt: str, max_retries: int = 3) -> str:
             )
             return response.choices[0].message.content
         except Exception as e:
-            if "rate" in str(e).lower() and attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 10  # 10s, 20s, 30s backoff
+            err_msg = str(e).lower()
+            is_rate_limit = any(
+                s in err_msg
+                for s in ["rate", "resource", "exhausted", "429", "quota", "limit"]
+            )
+            if is_rate_limit and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 15  # 15s, 30s, 45s, 60s
                 time.sleep(wait_time)
             else:
                 raise
