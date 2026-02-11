@@ -76,9 +76,9 @@ def extract_pdf(pdf_content: bytes, batch_size: int = 5) -> str:
         batch_end = min(batch_start + batch_size, total_pages)
         batch_label = f"batch {batch_idx + 1}/{total_batches} (pages {batch_start + 1}-{batch_end})"
 
-        # Rate-limit: pause between batches to avoid Gemini 429s
+        # Brief pause between batches to spread out Gemini API calls
         if batch_idx > 0:
-            time.sleep(4)
+            time.sleep(1)
 
         # Create batch PDF
         batch_pdf = _create_batch_pdf(reader, batch_start, batch_end)
